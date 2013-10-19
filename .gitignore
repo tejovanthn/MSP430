@@ -16,3 +16,9 @@
 *.out
 *.app
 *.elf
+
+# Map files
+*.map
+
+# C-Tag files
+tags
