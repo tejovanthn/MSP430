@@ -8,8 +8,9 @@
 # $(TARGET).elf $(TARGET).hex and $(TARGET).txt nad $(TARGET).map are all generated.
 # The TXT file is used for BSL loading, the ELF can be used for JTAG use
 # 
-#TARGET     = ${dirname ${CURDIR}}
-TARGET     =${notdir ${CURDIR}}
+TARGET     = ${notdir ${shell dirname ${CURDIR}}}
+PAR        = ../par/
+#TARGET     =${notdir ${CURDIR}}
 MCU        = msp430f5529
 # List all the source files here
 # eg if you have a source file foo.c then list it here
@@ -24,7 +25,7 @@ INCLUDES = -IInclude
 #######################################################################################
 CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
 ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
-LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map
+LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(PAR)$(TARGET).map
 ########################################################################################
 CC       = msp430-gcc
 LD       = msp430-ld
@@ -43,46 +44,56 @@ RM       = rm -f
 MV       = mv
 ########################################################################################
 # the file which will include dependencies
-DEPEND = $(SOURCES:.c=.d)
+DEPEND = $(PAR)$(SOURCES:.c=.d)
 # all the object files
-OBJECTS = $(SOURCES:.c=.o)
-all: $(TARGET).elf $(TARGET).hex $(TARGET).txt 
-$(TARGET).elf: $(OBJECTS)
+OBJECTS = $(PAR)$(SOURCES:.c=.o)
+
+all: $(PAR)$(TARGET).elf $(PAR)$(TARGET).hex $(PAR)$(TARGET).txt 
+
+$(PAR)$(TARGET).elf: $(OBJECTS)
+	echo ${notdir ${CURDIR}}
 	echo "Linking $@"
-	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
+	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $(PAR)$@
 	echo
 	echo ">>>> Size of Firmware <<<<"
-	$(SIZE) $(TARGET).elf
+	$(SIZE) $(PAR)$(TARGET).elf
 	echo
-%.hex: %.elf
+
+$(PAR)%.hex: $(PAR)%.elf
 	$(OBJCOPY) -O ihex $< $@
-%.txt: %.hex
+
+$(PAR)%.txt: $(PAR)%.hex
 	$(MAKETXT) -O $@ -TITXT $< -I
-	unix2dos $(TARGET).txt
+	unix2dos $(PAR)$(TARGET).txt
 #  The above line is required for the DOS based TI BSL tool to be able to read the txt file generated from linux/unix systems.
-%.o: %.c
+
+$(PAR)%.o: %.c
 	echo "Compiling $<"
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) -o $(PAR)$@ $<
+
 # rule for making assembler source listing, to see the code
-%.lst: %.c
+$(PAR)%.lst: %.c
 	$(CC) -c $(ASFLAGS) -Wa,-anlhd $< > $@
+
 # include the dependencies unless we're going to clean, then forget about them.
 ifneq ($(MAKECMDGOALS), clean)
 -include $(DEPEND)
 endif
+
 # dependencies file
 # includes also considered, since some of these are our own
 # (otherwise use -MM instead of -M)
-%.d: %.c
+$(PAR)%.d: %.c
 	echo "Generating dependencies $@ from $<"
-	$(CC) -M ${CFLAGS} $< >$@
+	$(CC) -M ${CFLAGS} $< >$(PAR)$@
+
+install: $(PAR)$(TARGET).elf
+	mspdebug -q --force-reset rf2500 "prog $(PAR)$(TARGET).elf"
+
 .SILENT:
 .PHONY:	clean
 clean:
-	-$(RM) $(OBJECTS)
-	-$(RM) $(TARGET).*
-	-$(RM) $(SOURCES:.c=.lst)
-	-$(RM) $(DEPEND)
+	-$(RM) $(PAR)*
 
 .PHONY: tags
 tags:
