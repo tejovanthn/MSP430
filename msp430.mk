@@ -8,19 +8,27 @@
 # $(TARGET).elf $(TARGET).hex and $(TARGET).txt nad $(TARGET).map are all generated.
 # The TXT file is used for BSL loading, the ELF can be used for JTAG use
 # 
+SHELL      = /bin/bash
 TARGET     = ${notdir ${shell dirname ${CURDIR}}}
+ROOT_DIR   = $(HOME)/codes/msp430/
 PAR        = ../par/
 #TARGET     =${notdir ${CURDIR}}
 MCU        = msp430f5529
 # List all the source files here
 # eg if you have a source file foo.c then list it here
+CORES_DIR  = $(ROOT_DIR)cores/
 CORES = ""
 
 LIBRARY = ""
 
+CORES_FULL = $(addprefix $(CORES_DIR), $(addsuffix /src/, $(CORES)))
+
 SOURCES = ${TARGET}.c
+SOURCES += $(foreach dir, $(CORES_FULL), $(wildcard $(dir)*.c))
+
 # Include are located in the Include directory
-INCLUDES = -IInclude
+INCLUDES = -Iinclude 
+INCLUDES += -I$(CORES_DIR)/src/
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
 CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
@@ -38,6 +46,7 @@ RANLIB   = msp430-ranlib
 STRIP    = msp430-strip
 SIZE     = msp430-size
 READELF  = msp430-readelf
+CP       = msp430-cpp
 MAKETXT  = srec_cat
 CP       = cp -p
 RM       = rm -f
@@ -64,10 +73,11 @@ $(PAR)%.hex: $(PAR)%.elf
 
 $(PAR)%.txt: $(PAR)%.hex
 	$(MAKETXT) -O $@ -TITXT $< -I
-	unix2dos $(PAR)$(TARGET).txt
+	#unix2dos $(PAR)$(TARGET).txt
 #  The above line is required for the DOS based TI BSL tool to be able to read the txt file generated from linux/unix systems.
 
 $(PAR)%.o: %.c
+	echo $(SOURCES)
 	echo "Compiling $<"
 	$(CC) -c $(CFLAGS) -o $(PAR)$@ $<
 
@@ -85,9 +95,12 @@ endif
 # (otherwise use -MM instead of -M)
 $(PAR)%.d: %.c
 	echo "Generating dependencies $@ from $<"
+	echo ${CFLAGS}
 	$(CC) -M ${CFLAGS} $< >$(PAR)$@
+	cp -rf $< $(PAR)$<
 
 install: $(PAR)$(TARGET).elf
+	@git commit -am '$(shell date)'
 	mspdebug -q --force-reset rf2500 "prog $(PAR)$(TARGET).elf"
 
 .SILENT:

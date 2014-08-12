@@ -41,25 +41,6 @@ if [ ! -d "msp430-build" ]; then
     # Make sure any additional patch files (from LTS) are located here as well
     cp ../*.patch .
 
-    # The next line is optional for the debugger and is not officially part of the mspgcc project.
-    mkdir msp430-build
-
-    #copy all the downloaded files into here
-    cd msp430-build
-    cp ../*.tar.bz2 .
-
-    # extract all the following files into the msp430-build directory
-    tar xvfj binutils-*
-    tar xvfj gcc-core-*
-    tar xvfj gdb-*
-    tar xvfj mspgcc-*
-    tar xvfj msp430mcu-*
-    tar xvfj msp430-libc-*
-
-    rm -rf *.tar.*
-
-    # Make sure any additional patch files (from LTS) are located here as well
-    cp ../*.patch .
 else
     echo "Build area available"
     cd msp430-build
